@@ -1,0 +1,60 @@
+from openpyxl import load_workbook, Workbook
+from pathlib import Path
+
+def listar_hojas_visibles_y_ocultas(input_xlsx: str, output_xlsx: str) -> None:
+    input_path = Path(input_xlsx)
+    if not input_path.exists():
+        raise FileNotFoundError(f"No existe el archivo de entrada: {input_path}")
+
+    # Cargar el Excel (sheet_state se puede leer aquí)
+    wb_in = load_workbook(input_path, read_only=False, data_only=True)
+
+    visibles = []
+    ocultas = []
+
+    # Mantiene el orden real de las hojas del archivo
+    for i, ws in enumerate(wb_in.worksheets, start=1):
+        estado = getattr(ws, "sheet_state", "visible")  # visible / hidden / veryHidden
+        nombre = ws.title
+
+        if estado == "visible":
+            visibles.append((i, nombre, estado))
+        else:
+            ocultas.append((i, nombre, estado))
+
+    # Crear Excel de salida
+    wb_out = Workbook()
+    ws_vis = wb_out.active
+    ws_vis.title = "Hojas_visibles"
+
+    ws_ocu = wb_out.create_sheet("Hojas_ocultas")
+
+    # Encabezados
+    headers = ["Orden", "Nombre_hoja", "Estado"]
+    ws_vis.append(headers)
+    ws_ocu.append(headers)
+
+    # Datos
+    for row in visibles:
+        ws_vis.append(row)
+
+    for row in ocultas:
+        ws_ocu.append(row)
+
+    # Ajuste simple de ancho de columnas
+    for ws in (ws_vis, ws_ocu):
+        ws.column_dimensions["A"].width = 10
+        ws.column_dimensions["B"].width = 40
+        ws.column_dimensions["C"].width = 15
+
+    wb_out.save(output_xlsx)
+    print(f"✅ Listado generado en: {output_xlsx}")
+    print(f"   Visibles: {len(visibles)} | Ocultas: {len(ocultas)}")
+
+
+if __name__ == "__main__":
+    # Ejemplo de uso rápido (cambia las rutas)
+    listar_hojas_visibles_y_ocultas(
+        input_xlsx="archivo_entrada.xlsx",
+        output_xlsx="listado_hojas.xlsx"
+    )
